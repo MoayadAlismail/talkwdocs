@@ -99,10 +99,22 @@ def prewarm(proc: JobProcess):
 @middleware
 async def cors_middleware(request: Request, handler):
     response: Response = await handler(request)
-    response.headers['Access-Control-Allow-Origin'] = 'https://your-vercel-domain.vercel.app'
+    response.headers['Access-Control-Allow-Origin'] = '*'  # During development. Change to your Vercel domain in production
     response.headers['Access-Control-Allow-Methods'] = 'POST, GET, OPTIONS'
-    response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
+    response.headers['Access-Control-Allow-Headers'] = '*'
     return response
+
+async def handle_connection_details(request):
+    try:
+        data = await request.json()
+        # Your connection logic here
+        return web.json_response({
+            "participantToken": "your_token_here",
+            "serverUrl": "your_livekit_server_url"
+        })
+    except Exception as e:
+        logger.error(f"Connection details error: {e}")
+        return web.json_response({"error": str(e)}, status=500)
 
 async def entrypoint(ctx: JobContext):
     """Main entry point for the voice assistant application"""
@@ -171,6 +183,7 @@ async def entrypoint(ctx: JobContext):
     await assistant.say(welcome_msg, allow_interruptions=True)
 
     app = web.Application(middlewares=[cors_middleware])
+    app.router.add_post('/connection-details', handle_connection_details)
 
 
 if __name__ == "__main__":
