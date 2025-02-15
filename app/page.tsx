@@ -136,9 +136,12 @@ function ControlBar(props: {
    * Note: This is only available on Scale plan, see {@link https://livekit.io/pricing | LiveKit Pricing} for more details.
    */
   const krisp = useKrispNoiseFilter();
+  
   useEffect(() => {
-    krisp.setNoiseFilterEnabled(true);
-  }, []);
+    if (krisp) {
+      krisp.setNoiseFilterEnabled(true);
+    }
+  }, [krisp]);
 
   return (
     <div className="relative h-[100px]">

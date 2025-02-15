@@ -3,6 +3,7 @@ import json
 import random
 import logging
 import aiohttp
+import os
 from datetime import datetime
 from typing import Annotated, Optional
 
@@ -14,6 +15,7 @@ from aiohttp import web
 from aiohttp.web import middleware
 from aiohttp.web_request import Request
 from aiohttp.web_response import Response
+from livekit import AccessToken
 
 load_dotenv(dotenv_path=".env.local")
 logger = logging.getLogger("voice-assistant")
@@ -107,14 +109,36 @@ async def cors_middleware(request: Request, handler):
 async def handle_connection_details(request):
     try:
         data = await request.json()
-        # Your connection logic here
+        room_name = f"room_{random.randint(1000, 9999)}"
+        
+        # Create LiveKit token
+        token = create_token(
+            api_key=os.getenv('LIVEKIT_API_KEY'),
+            api_secret=os.getenv('LIVEKIT_API_SECRET'),
+            room_name=room_name,
+            participant_name=data.get('userName'),
+            participant_identity=data.get('userId'),
+            metadata=json.dumps({
+                'uploadedFile': data.get('uploadedFile')
+            }) if data.get('uploadedFile') else None
+        )
+        
         return web.json_response({
-            "participantToken": "your_token_here",
-            "serverUrl": "your_livekit_server_url"
+            "participantToken": token,
+            "serverUrl": os.getenv('LIVEKIT_WS_URL')
         })
     except Exception as e:
         logger.error(f"Connection details error: {e}")
         return web.json_response({"error": str(e)}, status=500)
+
+def create_token(api_key, api_secret, room_name, participant_name, participant_identity, metadata=None):
+    token = AccessToken(api_key, api_secret)
+    token.add_grant(room_name=room_name, room_join=True, can_publish=True, can_subscribe=True)
+    token.name = participant_name
+    token.identity = participant_identity
+    if metadata:
+        token.metadata = metadata
+    return token.to_jwt()
 
 async def entrypoint(ctx: JobContext):
     """Main entry point for the voice assistant application"""
