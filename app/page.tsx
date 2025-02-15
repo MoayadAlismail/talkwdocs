@@ -136,9 +136,21 @@ function ControlBar(props: {
    * Note: This is only available on Scale plan, see {@link https://livekit.io/pricing | LiveKit Pricing} for more details.
    */
   const krisp = useKrispNoiseFilter();
+
   useEffect(() => {
-    krisp.setNoiseFilterEnabled(true);
-  }, []);
+    const enableKrisp = async () => {
+      try {
+        await krisp.setNoiseFilterEnabled(true);
+      } catch (error: unknown) {
+        // Type guard for error
+        if (error instanceof Error && error.message !== 'SDK_ALREADY_INITIALIZED') {
+          console.error('Krisp initialization error:', error);
+        }
+      }
+    };
+
+    enableKrisp();
+  }, []); // Empty dependency array means this runs once on mount
 
   return (
     <div className="relative h-[100px]">
