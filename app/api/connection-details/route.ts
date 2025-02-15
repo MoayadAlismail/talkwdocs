@@ -28,28 +28,48 @@ export interface RequestBody {
   } | null;
 }
 
-export async function POST(request: Request) {
+export async function POST(req: NextRequest) {
   try {
-    const body = await request.json()
-    
-    // Forward the request to your Railway backend
-    const response = await fetch('https://talkwdocs-production.up.railway.app/connection-details', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(body)
-    });
+    const body = (await req.json()) as RequestBody;
+    const roomName = `room_${Math.random().toString(36).substring(7)}`;
 
-    if (!response.ok) {
-      throw new Error(`Backend responded with ${response.status}`);
+    if (!API_KEY || !API_SECRET) {
+      throw new Error("LiveKit API credentials are not configured");
     }
 
-    const data = await response.json();
-    return NextResponse.json(data);
+    // Create a participant token with the uploaded file in metadata
+    const token = await createParticipantToken(
+      {
+        identity: body.userId,
+        name: body.userName,
+        metadata: body.uploadedFile 
+          ? JSON.stringify({
+              uploadedFile: {
+                content: body.uploadedFile.content,
+                filename: body.uploadedFile.filename,
+              },
+            })
+          : undefined,
+      },
+      roomName
+    );
+
+    if (!LIVEKIT_URL) {
+      throw new Error("LIVEKIT_URL is not defined");
+    }
+
+    const response: ConnectionDetails = {
+      participantToken: token,
+      serverUrl: LIVEKIT_URL,
+    };
+
+    return NextResponse.json(response);
   } catch (error) {
-    console.error('Connection details error:', error);
-    return NextResponse.json({ error: 'Failed to get connection details' }, { status: 500 });
+    console.error('Error creating connection details:', error);
+    return NextResponse.json(
+      { error: 'Failed to create connection details' },
+      { status: 500 }
+    );
   }
 }
 
