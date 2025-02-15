@@ -10,6 +10,10 @@ from dotenv import load_dotenv
 from livekit.agents import ( AutoSubscribe, JobContext, JobProcess, WorkerOptions, cli, llm, metrics, )
 from livekit.agents.pipeline import AgentCallContext, VoicePipelineAgent
 from livekit.plugins import openai, deepgram, elevenlabs, silero, turn_detector
+from aiohttp import web
+from aiohttp.web import middleware
+from aiohttp.web_request import Request
+from aiohttp.web_response import Response
 
 load_dotenv(dotenv_path=".env.local")
 logger = logging.getLogger("voice-assistant")
@@ -92,6 +96,14 @@ def prewarm(proc: JobProcess):
     """Initializes voice activity detection model"""
     proc.userdata["vad"] = silero.VAD.load()
 
+@middleware
+async def cors_middleware(request: Request, handler):
+    response: Response = await handler(request)
+    response.headers['Access-Control-Allow-Origin'] = 'https://your-vercel-domain.vercel.app'
+    response.headers['Access-Control-Allow-Methods'] = 'POST, GET, OPTIONS'
+    response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
+    return response
+
 async def entrypoint(ctx: JobContext):
     """Main entry point for the voice assistant application"""
     
@@ -157,6 +169,8 @@ async def entrypoint(ctx: JobContext):
         else "Hello! How can I help you today?"
     )
     await assistant.say(welcome_msg, allow_interruptions=True)
+
+    app = web.Application(middlewares=[cors_middleware])
 
 
 if __name__ == "__main__":
