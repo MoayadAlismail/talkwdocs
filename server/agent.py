@@ -44,12 +44,6 @@ class DocumentAssistant(llm.FunctionContext):
             return "No document has been uploaded at this time."
         return f"Contents of '{self.document_name}':\n{self.document_content}"
 
-    @llm.ai_callable()
-    def get_document_summary(self) -> str:
-        """Generates a summary of the uploaded document"""
-        if not self.document_content:
-            return "No document has been uploaded at this time."
-        return f"Summary of '{self.document_name}':\n{self.document_content}"
 
     @llm.ai_callable()
     async def fetch_weather(
@@ -82,11 +76,6 @@ class DocumentAssistant(llm.FunctionContext):
                     return result
                 else:
                     raise RuntimeError(f"Weather API request failed: {response.status}")
-    
-    @llm.ai_callable()
-    def get_current_time(self):
-        """Returns the current local time"""
-        return datetime.now().strftime("%H:%M:%S")
 
 
 # Voice Assistant Setup
@@ -99,7 +88,7 @@ def prewarm(proc: JobProcess):
 @middleware
 async def cors_middleware(request: Request, handler):
     response: Response = await handler(request)
-    response.headers['Access-Control-Allow-Origin'] = 'https://your-vercel-domain.vercel.app'
+    response.headers['Access-Control-Allow-Origin'] = 'https://talkwdocs.vercel.app'
     response.headers['Access-Control-Allow-Methods'] = 'POST, GET, OPTIONS'
     response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
     return response
@@ -111,9 +100,9 @@ async def entrypoint(ctx: JobContext):
     base_context = llm.ChatContext().append(
         role="system",
         text=(
-            "Interactive voice assistant powered by LiveKit. "
-            "Responses should be concise and conversational. "
-            "For document queries, check content first using get_document_content()."
+            "You are an interactive voice assistant powered by LiveKit. "
+            "Responses should be concise, conversational, informative, and nice . "
+            "For document queries, check content first."
         ),
     )
 
